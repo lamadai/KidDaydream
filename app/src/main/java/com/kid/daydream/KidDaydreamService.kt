@@ -83,33 +83,39 @@ class KidDaydreamService : android.service.dreams.DreamService() {
         setFullscreen(true);
     }
 
-    private var address: String? = null
-    private var username: String? = null
-    private var password: String? = null
 
     private fun getParams() {
         Thread(Runnable {
             Looper.prepare()
-            if (mConfigFile == null
-                    || !mConfigFile!!.canRead()) {
-                false
+            val configFileReadable = mConfigFile == null
+                    || !mConfigFile!!.canRead()
+            val lines: List<String>
+            if (configFileReadable) {
+                lines = ConfigHelper.getSmb(baseContext).asList()
+            } else {
+                lines = mConfigFile!!.readLines()?.take(3)
             }
-            val lines: List<String>? = mConfigFile!!.readLines()?.take(3)
-            address = lines?.get(0)?.trim()
-            username = lines?.get(1)?.trim()
-            password = lines?.get(2)?.trim()
+            var address: String = lines?.get(0)?.trim()
             if (address == null) {
                 false
             }
+            var username: String? = lines?.get(1)?.trim()
+            var password: String? = lines?.get(2)?.trim()
             val auth = NtlmPasswordAuthentication(null, username, password)
             val smbfile = SmbFile(address, auth)
             if (smbfile.isDirectory) {
+                if (configFileReadable) {
+                    ConfigHelper.updateSmb(baseContext, address!!, username, password)
+                    try {
+                        mConfigFile?.delete()
+                    } catch(e: Exception) {
+                    }
+                }
                 mSmbImages = smbfile.listFiles()
             }
             mNetHandler = Handler()
             Looper.loop()
         }).start()
-
     }
 
     private var mSmbImages: Array<out SmbFile>? = null
