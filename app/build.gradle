@@ -12,6 +12,13 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    externalNativeBuild {
+        ndkBuild {
+            path "src/main/cpp/Android.mk"
+            abiFilters 'x86', 'x86_64', 'armeabi', 'armeabi-v7a',
+                    'arm64-v8a'
+        }
+    }
     buildTypes {
         debug {
             debuggable true
@@ -21,6 +28,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    sourceSets { main { jni.srcDirs = ['src/main/jni', 'src/main/jni/include'] } }
 }
 
 dependencies {
