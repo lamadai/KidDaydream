@@ -2,11 +2,14 @@ package com.kid.daydream
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.*
+import android.os.AsyncTask
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.widget.ImageView
+import android.widget.Toast
 import jcifs.smb.NtlmPasswordAuthentication
 import jcifs.smb.SmbFile
-import java.io.File
 import java.io.UnsupportedEncodingException
 import java.net.URLDecoder
 import java.util.*
@@ -15,16 +18,13 @@ import java.util.regex.Pattern
 
 
 class KidDaydreamService : android.service.dreams.DreamService() {
-    private var mConfigFile: File? = File(Environment.getExternalStorageDirectory().toString()
-            + File.separator + "kid_daydream.conf");
-
     /**
      * Called when the dream's window has been created and is visible and animation may now begin.
      */
     var bitmapNext: Bitmap? = null
     var bitmapCurrent: Bitmap? = null
     private var mDreamingStopped: Boolean = false
-    val executor = Executors.newScheduledThreadPool(1)
+    val executor = Executors.newScheduledThreadPool(1)!!
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
@@ -44,6 +44,12 @@ class KidDaydreamService : android.service.dreams.DreamService() {
     }
 
     fun downloadImage() {
+        if (mSmbImages == null
+                || mSmbImages!!.isEmpty()) {
+            if (KidDayDreamApp.isDebug) Toast.makeText(this, "Pictures not found --|", Toast.LENGTH_SHORT).show()
+            finish()
+            false
+        }
         for (i in 1..200) {
             if (mNetHandler != null) {
                 break
@@ -78,23 +84,16 @@ class KidDaydreamService : android.service.dreams.DreamService() {
         mHandler = Handler()
         getParams()
         mImageView = ImageView(baseContext);
-        setInteractive(false);
+        isInteractive = false;
         // Hide system UI
-        setFullscreen(true);
+        isFullscreen = true;
     }
 
 
     private fun getParams() {
         Thread(Runnable {
             Looper.prepare()
-            val configFileReadable = mConfigFile == null
-                    || !mConfigFile!!.canRead()
-            val lines: List<String>
-            if (configFileReadable) {
-                lines = ConfigHelper.getSmb(baseContext).asList()
-            } else {
-                lines = mConfigFile!!.readLines()?.take(3)
-            }
+            var lines = ConfigHelper.getSmbConfig(baseContext).asList()
             var address: String = lines?.get(0)?.trim()
             if (address == null) {
                 false
@@ -103,15 +102,15 @@ class KidDaydreamService : android.service.dreams.DreamService() {
             var password: String? = lines?.get(2)?.trim()
             val auth = NtlmPasswordAuthentication(null, username, password)
             val smbfile = SmbFile(address, auth)
-            if (smbfile.isDirectory) {
-                if (configFileReadable) {
-                    ConfigHelper.updateSmb(baseContext, address!!, username, password)
-                    try {
-                        mConfigFile?.delete()
-                    } catch(e: Exception) {
-                    }
-                }
-                mSmbImages = smbfile.listFiles()
+            if (smbfile.canRead()
+                    && smbfile.isDirectory) {
+                mSmbImages = smbfile.listFiles().asList().dropWhile {
+                    !it.name.toLowerCase().endsWith(".jpg")
+                            && !it.name.toLowerCase().endsWith(".jpeg")
+                            && !it.name.toLowerCase().endsWith(".bmp")
+                            && !it.name.toLowerCase().endsWith(".png")
+                            && !it.name.toLowerCase().endsWith(".webp")
+                }.toTypedArray()
             }
             mNetHandler = Handler()
             Looper.loop()
@@ -145,7 +144,8 @@ class KidDaydreamService : android.service.dreams.DreamService() {
          * *
          * @return
          */
-        @JvmStatic private fun getURLEncode(encodeValue: String): Boolean? {
+        @JvmStatic
+        private fun getURLEncode(encodeValue: String): Boolean? {
             //utf8编码 字符集
             val utf8Pattern = Pattern.compile("^([\\x00-\\x7f]|[\\xc0-\\xdf][\\x80-\\xbf]|[\\xe0-\\xef][\\x80-\\xbf]{2}|[\\xf0-\\xf7][\\x80-\\xbf]{3}|[\\xf8-\\xfb][\\x80-\\xbf]{4}|[\\xfc-\\xfd][\\x80-\\xbf]{5})+$")
             //通用字符集(utf-8和GBK)
@@ -170,7 +170,8 @@ class KidDaydreamService : android.service.dreams.DreamService() {
          * *
          * @return
          */
-        @JvmStatic private fun getUrlDecode(urlInfo: String?, encodeStr: String): String {
+        @JvmStatic
+        private fun getUrlDecode(urlInfo: String?, encodeStr: String): String {
             var result = ""
             if (null == urlInfo) {
                 return result
