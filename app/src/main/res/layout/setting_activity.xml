@@ -7,10 +7,11 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:baselineAligned="false">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:orientation="vertical"
@@ -19,7 +20,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
                 android:layout_alignParentTop="true"
                 android:checked="true"
                 android:gravity="center"
@@ -35,13 +35,15 @@
                 android:gravity="center_vertical"
                 android:padding="@dimen/setting_padding"
                 android:text="smb://192.168.1.1/asdasd/asdasd/asdasd/asdasd/asdasd/asdasd/asdasd/asdasd/asdasd/asdasd"
-                android:textSize="25sp" />
+                android:textSize="25sp"
+                android:inputType="" />
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:baselineAligned="false">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -56,8 +58,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_alignParentTop="true"
                     android:checked="true"
                     android:gravity="center"
                     android:padding="@dimen/setting_padding"
@@ -66,14 +66,15 @@
 
                 <EditText
                     android:id="@+id/user_name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
                     android:gravity="center_vertical|right"
                     android:padding="@dimen/setting_padding"
                     android:text="admin"
-                    android:textSize="25sp" />
+                    android:textSize="25sp"
+                    android:inputType="" />
             </LinearLayout>
 
             <LinearLayout
@@ -83,8 +84,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_alignParentTop="true"
                     android:checked="true"
                     android:gravity="center"
                     android:padding="@dimen/setting_padding"
@@ -93,7 +92,7 @@
 
                 <EditText
                     android:id="@+id/password"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
@@ -116,8 +115,6 @@
                 android:id="@+id/conf_first"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:layout_alignParentStart="true"
-                android:layout_alignParentTop="true"
                 android:checked="true"
                 android:gravity="center_vertical"
                 android:padding="@dimen/setting_padding"
@@ -128,8 +125,6 @@
                 android:id="@+id/include_child_folder"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:layout_alignParentStart="true"
-                android:layout_alignParentTop="true"
                 android:checked="false"
                 android:gravity="center_vertical"
                 android:padding="@dimen/setting_padding"
