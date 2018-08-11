@@ -198,15 +198,15 @@ class KidDaydreamService : android.service.dreams.DreamService() {
                 } else {
                     mImageView!!.scaleType = ImageView.ScaleType.CENTER_CROP
                 }
-                true
+                return true
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 nextImage()
-                true
+                return true
             }
             KeyEvent.KEYCODE_DPAD_RIGHT-> {
                 nextImage()
-                true
+                return true
             }
         }
         return super.dispatchKeyEvent(event)

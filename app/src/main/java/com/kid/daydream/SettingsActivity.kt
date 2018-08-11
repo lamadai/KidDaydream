@@ -34,6 +34,12 @@ class SettingsActivity : Activity() {
         initViews()
         readConfigFile()
         updateConfigViews();
+        btn_save.setOnClickListener {
+            ConfigHelper.saveSmbConfig(baseContext,
+                    "" + smb_address.text,
+                    "" + user_name.text,
+                    "" + password.text)
+        }
     }
 
     private fun initViews() {
