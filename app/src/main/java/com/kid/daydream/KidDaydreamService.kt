@@ -6,6 +6,7 @@ import android.os.AsyncTask
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.widget.ImageView
 import android.widget.Toast
 import jcifs.smb.NtlmPasswordAuthentication
@@ -183,5 +184,29 @@ class KidDaydreamService : android.service.dreams.DreamService() {
             }
             return result
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        if(event == null
+            || mImageView == null){
+            return false;
+        }
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER -> {
+                if(mImageView!!.scaleType == ImageView.ScaleType.CENTER_CROP) {
+                    mImageView!!.scaleType = ImageView.ScaleType.CENTER_INSIDE
+                } else {
+                    mImageView!!.scaleType = ImageView.ScaleType.CENTER_CROP
+                }
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                true
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT-> {
+                true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 }
