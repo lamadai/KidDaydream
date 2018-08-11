@@ -201,12 +201,18 @@ class KidDaydreamService : android.service.dreams.DreamService() {
                 true
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
+                nextImage()
                 true
             }
             KeyEvent.KEYCODE_DPAD_RIGHT-> {
+                nextImage()
                 true
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun nextImage() {
+        Toast.makeText(applicationContext, "next", 1).show()
     }
 }
