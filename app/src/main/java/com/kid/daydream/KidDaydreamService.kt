@@ -5,7 +5,7 @@ import android.graphics.BitmapFactory
 import android.os.AsyncTask
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
+import android.os.Message
 import android.view.KeyEvent
 import android.widget.ImageView
 import android.widget.Toast
@@ -13,7 +13,6 @@ import jcifs.smb.NtlmPasswordAuthentication
 import jcifs.smb.SmbFile
 import java.io.UnsupportedEncodingException
 import java.net.URLDecoder
-import java.util.*
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
@@ -22,6 +21,7 @@ class KidDaydreamService : android.service.dreams.DreamService() {
     /**
      * Called when the dream's window has been created and is visible and animation may now begin.
      */
+    var bitmapPre: Bitmap? = null
     var bitmapNext: Bitmap? = null
     var bitmapCurrent: Bitmap? = null
     private var mDreamingStopped: Boolean = false
@@ -31,67 +31,11 @@ class KidDaydreamService : android.service.dreams.DreamService() {
         super.onDreamingStarted()
         setContentView(mImageView);
         mDreamingStopped = true
-        downloadImage()
     }
 
-    fun changeImage() {
-        mHandler?.post {
-            mImageView?.setImageBitmap(bitmapNext)
-            bitmapCurrent?.recycle()
-            bitmapCurrent = bitmapNext
-            bitmapNext = null
-            downloadImage()
-        }
-    }
+    private val TIMER_MESSAGE = 123
 
-    fun downloadImage() {
-        if (mSmbImages == null
-                || mSmbImages!!.isEmpty()) {
-            if (KidDayDreamApp.isDebug) Toast.makeText(this, "Pictures not found --|", Toast.LENGTH_SHORT).show()
-            finish()
-            false
-        }
-        for (i in 1..200) {
-            if (mNetHandler != null) {
-                break
-            }
-            SystemClock.sleep(100)
-        }
-        mNetHandler!!.post {
-            if (bitmapNext == null
-                    || bitmapNext!!.isRecycled) {
-                bitmapNext = BitmapFactory.decodeStream(
-                        mSmbImages?.get(Random(SystemClock.currentThreadTimeMillis()).nextInt(mSmbImages?.size!!))!!.inputStream)
-            }
-            if (bitmapCurrent != null
-                    && !bitmapCurrent!!.isRecycled) {
-                SystemClock.sleep(5000)
-            }
-            changeImage()
-        }
-    }
-
-    private var mImageView: ImageView? = null;
-
-    private var task: AsyncTask<Integer, Integer, Integer>? = null
-
-    private var mNetHandler: Handler? = null
-
-    private var mHandler: Handler? = null
-
-    /** {@inheritDoc}  */
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        mHandler = Handler()
-        getParams()
-        mImageView = ImageView(baseContext);
-        isInteractive = false;
-        // Hide system UI
-        isFullscreen = true;
-    }
-
-
-    private fun getParams() {
+    private fun loadFiles() {
         Thread(Runnable {
             Looper.prepare()
             var lines = ConfigHelper.getSmbConfig(baseContext).asList()
@@ -113,10 +57,58 @@ class KidDaydreamService : android.service.dreams.DreamService() {
                             && !it.name.toLowerCase().endsWith(".webp")
                 }.toTypedArray()
             }
-            mNetHandler = Handler()
+            if (mSmbImages == null
+                    || mSmbImages!!.isEmpty()) {
+                if (KidDayDreamApp.isDebug) Toast.makeText(this, "Pictures not found --|", Toast.LENGTH_SHORT).show()
+                finish()
+                return@Runnable
+            }
+            bitmapPre = downloadImage((index - 1) % mSmbImages!!.size)
+            bitmapCurrent = downloadImage(index)
+            bitmapNext = downloadImage((index + 1) % mSmbImages!!.size)
+            mHandler?.post {
+                mImageView!!.setImageBitmap(bitmapCurrent)
+
+            }
+            mNetHandler = object : Handler() {
+                override fun dispatchMessage(msg: Message) {
+                    if (msg.arg1 == TIMER_MESSAGE) {
+                        nextImage();
+                    }
+                }
+            }
+            mNetHandler!!.sendEmptyMessageDelayed(TIMER_MESSAGE, 5000);
             Looper.loop()
         }).start()
     }
+
+
+    fun downloadImage(curIndex: Int): Bitmap? {
+        return BitmapFactory.decodeStream(
+                mSmbImages?.get(curIndex)!!.inputStream)
+    }
+
+    private var mImageView: ImageView? = null;
+
+    private var task: AsyncTask<Integer, Integer, Integer>? = null
+
+    private var mNetHandler: Handler? = null
+
+    private var mHandler: Handler? = null
+
+    private var index = 0;
+
+    /** {@inheritDoc}  */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        mHandler = Handler()
+        loadFiles()
+        mImageView = ImageView(baseContext);
+        isInteractive = false;
+        // Hide system UI
+        isFullscreen = true;
+    }
+
 
     private var mSmbImages: Array<out SmbFile>? = null
 
@@ -187,13 +179,13 @@ class KidDaydreamService : android.service.dreams.DreamService() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
-        if(event == null
-            || mImageView == null){
+        if (event == null
+                || mImageView == null) {
             return false;
         }
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER -> {
-                if(mImageView!!.scaleType == ImageView.ScaleType.CENTER_CROP) {
+                if (mImageView!!.scaleType == ImageView.ScaleType.CENTER_CROP) {
                     mImageView!!.scaleType = ImageView.ScaleType.CENTER_INSIDE
                 } else {
                     mImageView!!.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -201,18 +193,64 @@ class KidDaydreamService : android.service.dreams.DreamService() {
                 return true
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                nextImage()
+                if (!lockInput) {
+                    preImage()
+                }
                 return true
             }
-            KeyEvent.KEYCODE_DPAD_RIGHT-> {
-                nextImage()
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (!lockInput) {
+                    nextImage()
+                }
                 return true
             }
         }
         return super.dispatchKeyEvent(event)
     }
 
+    private var lockInput: Boolean = false
+
     private fun nextImage() {
-        Toast.makeText(applicationContext, "next", 1).show()
+        index = (index + 1) % mSmbImages!!.size
+        mHandler?.post {
+            mImageView?.setImageBitmap(bitmapNext)
+            bitmapPre!!.recycle()
+            bitmapPre = bitmapCurrent
+            bitmapCurrent = bitmapNext
+            mNetHandler!!.removeCallbacksAndMessages(TIMER_MESSAGE);
+            mImageView!!.setImageBitmap(bitmapCurrent)
+            mNetHandler!!.sendEmptyMessageDelayed(TIMER_MESSAGE, 5000);
+            if (bitmapNext != null && mSmbImages!!.size < 3) {
+                return@post
+            }
+            lockInput = true;
+            bitmapNext != null
+            mNetHandler?.post {
+                bitmapNext = downloadImage((index + 1) % mSmbImages!!.size)
+                lockInput = false
+            }
+        }
+    }
+
+    private fun preImage() {
+        index = (index - 1) % mSmbImages!!.size
+        mHandler?.post {
+            mImageView?.setImageBitmap(bitmapNext)
+            bitmapNext!!.recycle()
+            bitmapNext = bitmapCurrent
+            bitmapCurrent = bitmapPre
+            mNetHandler!!.removeCallbacksAndMessages(TIMER_MESSAGE);
+            mImageView!!.setImageBitmap(bitmapCurrent)
+            mNetHandler!!.sendEmptyMessageDelayed(TIMER_MESSAGE, 5000);
+            if (bitmapNext != null && mSmbImages!!.size < 3) {
+                return@post
+            }
+            lockInput = true;
+            bitmapPre = null
+            mNetHandler!!.post {
+                bitmapPre = downloadImage((index - 1) % mSmbImages!!.size)
+                lockInput = false
+            }
+        }
     }
 }
